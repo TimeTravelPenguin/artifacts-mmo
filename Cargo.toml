@@ -9,7 +9,7 @@ color-eyre = "0.6.3"
 crossterm = "0.28.1"
 directories = "6.0.0"
 dotenv = "0.15.0"
-iced = "0.13.1"
+iced = { version = "0.13.1", features = ["advanced", "tokio"] }
 itertools = "0.14.0"
 lazy_static = "1.5.0"
 openapi = { path = "./openapi" }
@@ -31,7 +31,23 @@ tokio = { version = "1.44.0", features = [
 tracing = { version = "0.1.41", features = ["release_max_level_info"] }
 tracing-appender = "0.2.3"
 tracing-error = "0.2.1"
-tracing-subscriber = { version = "0.3.19", features = ["tracing-log", "parking_lot", "env-filter"] }
+tracing-subscriber = { version = "0.3.19", features = [
+  "tracing-log",
+  "parking_lot",
+  "env-filter",
+] }
 tui-menu = "0.3.0"
 tui-widget-list = "0.13.2"
 url = { version = "2.5.4", features = ["serde"] }
+
+[profile.dev.package.backtrace]
+opt-level = 3
+
+[profile.release-opt]
+inherits = "release"
+codegen-units = 1
+debug = false
+lto = true
+incremental = false
+opt-level = 3
+strip = "debuginfo"
