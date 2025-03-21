@@ -10,12 +10,12 @@
 
 use super::{configuration, Error};
 use crate::apis::ContentType;
+use crate::models::RewardDataResponseSchema;
 use crate::{apis::ResponseContent, models};
 use async_trait::async_trait;
 use reqwest;
 use serde::{de::Error as _, Deserialize, Serialize};
 use std::sync::Arc;
-use crate::models::RewardDataResponseSchema;
 
 #[async_trait]
 pub trait MyCharactersApi: Send + Sync {
@@ -313,7 +313,19 @@ impl MyCharactersApiClient {
         Self { configuration }
     }
 
-    fn match_content_type(local_var_content_type: ContentType, local_var_content: &String) -> Result<Result<RewardDataResponseSchema, Error<ActionCompleteTaskMyNameActionTaskCompletePostError>>, Result<RewardDataResponseSchema, Error<ActionCompleteTaskMyNameActionTaskCompletePostError>>> {
+    fn match_content_type(
+        local_var_content_type: ContentType,
+        local_var_content: &String,
+    ) -> Result<
+        Result<
+            RewardDataResponseSchema,
+            Error<ActionCompleteTaskMyNameActionTaskCompletePostError>,
+        >,
+        Result<
+            RewardDataResponseSchema,
+            Error<ActionCompleteTaskMyNameActionTaskCompletePostError>,
+        >,
+    > {
         Ok(match local_var_content_type {
             ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
             ContentType::Text => return Err(Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::RewardDataResponseSchema`")))),

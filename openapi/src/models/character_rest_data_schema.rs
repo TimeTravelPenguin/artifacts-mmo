@@ -11,6 +11,7 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
+#[deprecated(note = "Use `api::characters::Character::Rest` instead")]
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CharacterRestDataSchema {
     /// Cooldown details

@@ -1,0 +1,51 @@
+vars: {
+  d2-config: {
+    dark-theme-id: 200
+  }
+}
+
+shape: sequence_diagram
+
+title: Request Character States {
+  shape: text
+  near: top-center
+  style: {
+    font-size: 32
+  }
+}
+
+# async {
+#   target-arrowhead.shape: arrow
+# }
+#
+# result {
+#   style.stroke-dash: 5
+# }
+
+client: Client
+server: Player Server
+api: Artifacts API
+
+client.conn -> server.conn: Connect to Player Server {
+  target-arrowhead.shape: arrow
+}
+client.conn <- server.conn: Established {
+  style.stroke-dash: 5
+}
+
+server.req
+api.req
+
+loop: {
+  server.req <- api: Notify Update
+  server.req -> api.req: Request Character Info {
+    target-arrowhead.shape: arrow
+  }
+  server.req <- api.req: Character Info {
+    style.stroke-dash: 5
+  }
+
+  client <- server.req: Character Info {
+    source-arrowhead.shape: arrow
+  }
+}
