@@ -12,6 +12,8 @@ pub enum ArtifactsError {
     Http(#[from] reqwest::Error),
     #[error("Deserialize error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("Middleware error: {0}")]
+    RetryError(#[from] reqwest_middleware::Error),
     #[error("Unknown error: {0}")]
     Unknown(String),
 }
