@@ -3,8 +3,32 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::api::client::ArtifactsClient;
+
 pub mod characters;
 pub mod client;
+pub mod maps;
+pub mod monsters;
+
+pub trait Action {
+    type Return;
+
+    fn execute(
+        &self,
+        api: &ArtifactsClient,
+    ) -> impl Future<Output = anyhow::Result<Self::Return>> + Send;
+}
+
+pub trait QueryAction {
+    type Query;
+    type Return;
+
+    fn execute(
+        &self,
+        api: &ArtifactsClient,
+        query: Self::Query,
+    ) -> impl Future<Output = anyhow::Result<Self::Return>> + Send;
+}
 
 #[derive(Debug, Error)]
 pub enum ArtifactsError {
