@@ -1,23 +1,23 @@
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures::{FutureExt, StreamExt};
 use ratatui::{DefaultTerminal, prelude::*};
-use tokio::task;
-use tracing::{error, info};
 use tui_logger::{TuiLoggerLevelOutput, TuiLoggerSmartWidget, TuiWidgetEvent, TuiWidgetState};
 
-use crate::api::client::ArtifactsClient;
-
 pub struct App {
-    client: ArtifactsClient,
     app_state: TuiWidgetState,
     running: bool,
     event_stream: EventStream,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl App {
-    pub fn new(client: ArtifactsClient) -> Self {
+    pub fn new() -> Self {
         Self {
-            client,
             running: false,
             event_stream: EventStream::new(),
             app_state: TuiWidgetState::new()
@@ -27,14 +27,6 @@ impl App {
 
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> anyhow::Result<()> {
         self.running = true;
-
-        let client = self.client.clone();
-
-        task::spawn(async move {
-            if let Err(e) = make_request(client).await {
-                error!(target: "App", "Error making request: {:?}", e);
-            }
-        });
 
         while self.running {
             terminal.draw(|f| {
@@ -124,13 +116,4 @@ impl Widget for &App {
             .render(help_area, buf);
         }
     }
-}
-
-async fn make_request(api: ArtifactsClient) -> anyhow::Result<()> {
-    let character_name = "Penguin";
-    let character = api.get_character(character_name).await?;
-
-    info!(target:"make_request", "Character: {:?}", character);
-
-    Ok(())
 }
