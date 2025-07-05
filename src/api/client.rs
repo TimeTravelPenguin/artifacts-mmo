@@ -17,6 +17,8 @@ pub struct ArtifactsClient {
 
 impl ArtifactsClient {
     pub fn new(api_token: impl Into<String>) -> Self {
+        let user_agent = format!("ArtifactsClient/{}", env!("CARGO_PKG_VERSION"));
+
         let client = reqwest::Client::builder()
             .default_headers({
                 let mut headers = reqwest::header::HeaderMap::new();
@@ -26,7 +28,7 @@ impl ArtifactsClient {
                 );
                 headers
             })
-            .user_agent(format!("ArtifactsClient/{}", env!("CARGO_PKG_VERSION")))
+            .user_agent(&user_agent)
             .build()
             .expect("Failed to create HTTP client");
 
@@ -44,7 +46,7 @@ impl ArtifactsClient {
 
         Self {
             client,
-            user_agent: format!("ArtifactsClient/{}", env!("CARGO_PKG_VERSION")),
+            user_agent,
             base_url: "https://api.artifactsmmo.com".to_string(),
             api_token: api_token.into(),
         }
