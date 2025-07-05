@@ -70,8 +70,12 @@ impl App {
             }
             KeyCode::Char(' ') => state.transition(TuiWidgetEvent::SpaceKey),
             KeyCode::Esc => state.transition(TuiWidgetEvent::EscapeKey),
-            KeyCode::PageUp => state.transition(TuiWidgetEvent::PrevPageKey),
-            KeyCode::PageDown => state.transition(TuiWidgetEvent::NextPageKey),
+            KeyCode::Up if key.modifiers == KeyModifiers::SHIFT => {
+                state.transition(TuiWidgetEvent::PrevPageKey)
+            }
+            KeyCode::Down if key.modifiers == KeyModifiers::SHIFT => {
+                state.transition(TuiWidgetEvent::NextPageKey)
+            }
             KeyCode::Up => state.transition(TuiWidgetEvent::UpKey),
             KeyCode::Down => state.transition(TuiWidgetEvent::DownKey),
             KeyCode::Left => state.transition(TuiWidgetEvent::LeftKey),
@@ -105,11 +109,11 @@ impl Widget for &App {
             .state(&self.app_state)
             .render(log_area, buf);
 
-        if area.width > 40 {
+        if area.width >= 140 {
             Text::from(vec![
                 "Q: Quit | Tab: Switch state | ↑/↓: Select target | f: Focus target".into(),
                 "←/→: Display level | +/-: Filter level | Space: Toggle hidden targets".into(),
-                "h: Hide target selector | PageUp/Down: Scroll | Esc: Cancel scroll".into(),
+                "h: Hide target selector | Shift + ↑/↓: Scroll | Esc: Cancel scroll".into(),
             ])
             .style(Color::Gray)
             .centered()
