@@ -1,31 +1,148 @@
+use std::sync::{Arc, Mutex};
+
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures::{FutureExt, StreamExt};
-use ratatui::{DefaultTerminal, prelude::*};
+use ratatui::{
+    prelude::*,
+    widgets::{Gauge, Paragraph},
+};
 use tui_logger::{TuiLoggerLevelOutput, TuiLoggerSmartWidget, TuiWidgetEvent, TuiWidgetState};
 
-pub struct App {
-    app_state: TuiWidgetState,
-    running: bool,
-    event_stream: EventStream,
+use crate::api::client::ArtifactsClient;
+use crate::models::character::Character;
+
+#[derive(Debug, Clone, Default)]
+pub struct CharacterWidgetState {
+    pub characters: Vec<Character>,
+    pub direction: Direction,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        Self::new()
+impl CharacterWidgetState {
+    pub fn characters(mut self, characters: Vec<Character>) -> Self {
+        self.characters = characters;
+        self
     }
+
+    pub fn direction(mut self, direction: Direction) -> Self {
+        self.direction = direction;
+        self
+    }
+}
+
+impl CharacterWidgetState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct CharacterWidget;
+
+impl CharacterWidget {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl StatefulWidget for &CharacterWidget {
+    type State = CharacterWidgetState;
+
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let characters = state.characters.clone();
+        let num_chars = characters.len();
+
+        if num_chars == 0 {
+            Paragraph::new("No characters available")
+                .alignment(Alignment::Center)
+                .style(Style::default().fg(Color::Gray))
+                .render(area, buf);
+            return;
+        }
+
+        let constraints = std::iter::repeat_n(Constraint::Fill(1), num_chars).collect::<Vec<_>>();
+
+        let areas = if state.direction == Direction::Horizontal {
+            Layout::horizontal(constraints).split(area)
+        } else {
+            Layout::vertical(constraints).split(area)
+        };
+
+        for (char, area) in characters.iter().zip(areas.iter()) {
+            let [name_area, hp_bar_area] =
+                Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).areas(*area);
+
+            let level_text = format!("Lv. {} {}", char.level, char.name);
+            let [name_area, cooldown_area] = Layout::horizontal([
+                Constraint::Length(level_text.len() as u16 + 2),
+                Constraint::Fill(1),
+            ])
+            .areas(name_area);
+
+            Paragraph::new(Text::from(format!("Lv. {} {}", char.level, char.name)))
+                .style(Style::default().fg(Color::White))
+                .render(name_area, buf);
+
+            let remaining_sec = {
+                let now = chrono::Utc::now();
+                let remaining = char.cooldown_expiration.signed_duration_since(now);
+                remaining.num_seconds().max(0)
+            };
+
+            if remaining_sec > 0 {
+                Paragraph::new(Text::from(format!("(Cooldown: {}s)", remaining_sec as u32)))
+                    .style(Style::default().fg(Color::Yellow))
+                    .render(cooldown_area, buf);
+            }
+
+            let [hp_label_area, hp_bar_area] =
+                Layout::horizontal([Constraint::Length(12), Constraint::Max(20)])
+                    .areas(hp_bar_area);
+
+            Paragraph::new(Text::from(format!("HP: {}/{}", char.hp, char.max_hp)))
+                .render(hp_label_area, buf);
+
+            let hp_ratio = if char.max_hp > 0 {
+                char.hp as f64 / char.max_hp as f64
+            } else {
+                0.0
+            };
+
+            let hp_percentage = (100.0 * hp_ratio).round() as u16;
+
+            Gauge::default()
+                .gauge_style(Style::default().fg(Color::Green).bg(Color::Black))
+                .ratio(hp_ratio)
+                .label(format!("{}%", hp_percentage))
+                .render(hp_bar_area, buf);
+        }
+    }
+}
+
+pub struct App {
+    client: ArtifactsClient,
+    running: bool,
+    event_stream: EventStream,
+    tui_widget_state: TuiWidgetState,
+    character_widget: Arc<Mutex<CharacterWidgetState>>,
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(client: ArtifactsClient) -> Self {
         Self {
+            client,
             running: false,
             event_stream: EventStream::new(),
-            app_state: TuiWidgetState::new()
+            tui_widget_state: TuiWidgetState::new()
                 .set_default_display_level(tui_logger::LevelFilter::Info),
+            character_widget: Arc::new(Mutex::new(CharacterWidgetState::new())),
         }
     }
 
-    pub async fn run(mut self, mut terminal: DefaultTerminal) -> anyhow::Result<()> {
+    pub fn character_widget_state(&self) -> Arc<Mutex<CharacterWidgetState>> {
+        self.character_widget.clone()
+    }
+
+    pub async fn run<B: Backend>(mut self, mut terminal: Terminal<B>) -> anyhow::Result<()> {
         self.running = true;
 
         while self.running {
@@ -61,7 +178,7 @@ impl App {
 
     /// Handles the key events and updates the state of [`App`].
     fn on_key_event(&mut self, key: KeyEvent) {
-        let state = &mut self.app_state;
+        let state = &mut self.tui_widget_state;
 
         match key.code {
             KeyCode::Char('q') => self.quit(),
@@ -96,8 +213,25 @@ impl App {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        let [app_area, log_area] = if area.height >= 40 {
+            Layout::vertical([Constraint::Percentage(20), Constraint::Fill(1)]).areas(area)
+        } else {
+            Layout::horizontal([Constraint::Max(30), Constraint::Fill(1)]).areas(area)
+        };
+
+        if let Ok(mut state) = self.character_widget.lock() {
+            state.direction = if app_area.height >= 40 {
+                Direction::Vertical
+            } else {
+                Direction::Horizontal
+            };
+
+            let area = app_area.inner(Margin::new(1, 1));
+            CharacterWidget::new().render(area, buf, &mut state);
+        }
+
         let [log_area, help_area] =
-            Layout::vertical([Constraint::Fill(1), Constraint::Length(3)]).areas(area);
+            Layout::vertical([Constraint::Fill(1), Constraint::Length(3)]).areas(log_area);
 
         TuiLoggerSmartWidget::default()
             .style_error(Style::default().fg(Color::Red))
@@ -106,7 +240,7 @@ impl Widget for &App {
             .style_trace(Style::default().fg(Color::Magenta))
             .style_info(Style::default().fg(Color::Cyan))
             .output_level(Some(TuiLoggerLevelOutput::Long))
-            .state(&self.app_state)
+            .state(&self.tui_widget_state)
             .render(log_area, buf);
 
         if area.width >= 140 {

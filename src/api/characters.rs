@@ -1,16 +1,26 @@
-use serde::{Deserialize, Serialize};
 use tracing::info;
 
-use crate::api::{ArtifactsApiResponse, ArtifactsError, client::ArtifactsClient};
+use crate::{
+    api::{ArtifactsApiResponse, ArtifactsError, client::ArtifactsClient},
+    make_error,
+    models::character::Character,
+};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Character {
-    pub name: String,
-    pub gold: u64,
-}
+make_error!(GetCharacterError,
+    404 => CharacterNotFound
+        => "Character not found",
+);
+
+make_error!(DeleteCharacterError,
+    498 => CharacterNotFound
+        => "Character not found",
+);
 
 impl ArtifactsClient {
-    pub async fn get_character(&self, name: &str) -> Result<Character, ArtifactsError> {
+    pub async fn get_character(
+        &self,
+        name: &str,
+    ) -> Result<Character, ArtifactsError<GetCharacterError>> {
         info!("Fetching character: {}", name);
 
         let url = format!("{}/characters/{}", self.base_url, name);
@@ -25,7 +35,10 @@ impl ArtifactsClient {
         Ok(char)
     }
 
-    pub async fn delete_character(&self, name: &str) -> Result<Character, ArtifactsError> {
+    pub async fn delete_character(
+        &self,
+        name: &str,
+    ) -> Result<Character, ArtifactsError<DeleteCharacterError>> {
         info!("Deleting character: {}", name);
 
         let body = serde_json::json!({
