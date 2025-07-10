@@ -68,8 +68,12 @@ impl StatefulWidget for &CharacterWidget {
         };
 
         for (char, area) in characters.iter().zip(areas.iter()) {
-            let [name_area, hp_bar_area] =
-                Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).areas(*area);
+            let [name_area, hp_bar_area, xp_bar_area] = Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Length(1),
+                Constraint::Length(1),
+            ])
+            .areas(*area);
 
             let level_text = format!("Lv. {} {}", char.level, char.name);
             let [name_area, cooldown_area] = Layout::horizontal([
@@ -94,6 +98,7 @@ impl StatefulWidget for &CharacterWidget {
                     .render(cooldown_area, buf);
             }
 
+            // HP bar
             let [hp_label_area, hp_bar_area] =
                 Layout::horizontal([Constraint::Length(12), Constraint::Max(20)])
                     .areas(hp_bar_area);
@@ -109,11 +114,41 @@ impl StatefulWidget for &CharacterWidget {
 
             let hp_percentage = (100.0 * hp_ratio).round() as u16;
 
+            let color = if hp_percentage < 20 {
+                Color::Red
+            } else if hp_percentage < 50 {
+                Color::Yellow
+            } else {
+                Color::Green
+            };
+
             Gauge::default()
-                .gauge_style(Style::default().fg(Color::Green).bg(Color::Black))
+                .gauge_style(Style::default().fg(color).bg(Color::Black))
                 .ratio(hp_ratio)
                 .label(format!("{}%", hp_percentage))
                 .render(hp_bar_area, buf);
+
+            // XP bar
+            let [xp_label_area, xp_bar_area] =
+                Layout::horizontal([Constraint::Length(12), Constraint::Max(20)])
+                    .areas(xp_bar_area);
+
+            Paragraph::new(Text::from(format!("XP: {}/{}", char.xp, char.max_xp)))
+                .render(xp_label_area, buf);
+
+            let xp_ratio = if char.max_xp > 0 {
+                char.xp as f64 / char.max_xp as f64
+            } else {
+                0.0
+            };
+
+            let xp_percentage = (100.0 * xp_ratio).round() as u16;
+
+            Gauge::default()
+                .gauge_style(Style::default().fg(Color::Blue).bg(Color::Black))
+                .ratio(xp_ratio)
+                .label(format!("{}%", xp_percentage))
+                .render(xp_bar_area, buf);
         }
     }
 }
@@ -216,7 +251,7 @@ impl Widget for &App {
         let [app_area, log_area] = if area.height >= 40 {
             Layout::vertical([Constraint::Percentage(20), Constraint::Fill(1)]).areas(area)
         } else {
-            Layout::horizontal([Constraint::Max(30), Constraint::Fill(1)]).areas(area)
+            Layout::horizontal([Constraint::Max(40), Constraint::Fill(1)]).areas(area)
         };
 
         if let Ok(mut state) = self.character_widget.lock() {
@@ -240,6 +275,8 @@ impl Widget for &App {
             .style_trace(Style::default().fg(Color::Magenta))
             .style_info(Style::default().fg(Color::Cyan))
             .output_level(Some(TuiLoggerLevelOutput::Long))
+            .output_file(false)
+            .output_line(false)
             .state(&self.tui_widget_state)
             .render(log_area, buf);
 
