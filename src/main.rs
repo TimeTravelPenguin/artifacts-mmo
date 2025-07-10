@@ -1,28 +1,22 @@
 #![allow(dead_code)]
 
+use dotenvy_macro::dotenv;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-
-use dotenvy_macro::dotenv;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt, util::SubscriberInitExt};
 use tui_logger::TuiTracingSubscriberLayer;
 
-use crate::{
+use artifacts::{
     actions::{FightAction, GetCharactersAction, RestAction},
     api::{Action, ParamatarisedAction, client::ArtifactsClient, maps::MapQuery},
-    app::App,
+    app::{self, App},
+    models,
 };
-
-mod actions;
-mod api;
-mod app;
-mod macros;
-mod models;
 
 async fn periodically_update_characters(
     api: ArtifactsClient,
@@ -118,6 +112,11 @@ async fn character_fight_loop(api: ArtifactsClient, name: String) {
         }
     };
 
+    if character.cooldown_expiration > chrono::Utc::now() {
+        info!(target: "fight-loop", "Character {} is on cooldown. Waiting for cooldown to expire.", name);
+        sleep_until_cooldown_expired(character.cooldown_expiration).await;
+    }
+
     if character.hp < character.max_hp {
         info!(target: "fight-loop", "Character {} needs to rest before starting the fight loop.", name);
 
@@ -138,8 +137,6 @@ async fn character_fight_loop(api: ArtifactsClient, name: String) {
         }
     }
 
-    info!(target: "fight-loop", "Fetched character: {:?}", character);
-
     #[allow(unused_assignments)]
     let mut lost_hp = 0;
 
@@ -159,8 +156,8 @@ async fn character_fight_loop(api: ArtifactsClient, name: String) {
         info!(target: "fight-loop", "Preparing to fight with character: {}", name);
         match FightAction.execute(&api, &character).await {
             Ok(fight_data) => {
-                info!("Fight result for {}: {:?}", name, fight_data);
-                lost_hp = character.hp - fight_data.character.hp;
+                info!("Fight result for {}: {:?}", name, fight_data.fight.result);
+                lost_hp = character.hp.saturating_sub(fight_data.character.hp);
                 character = fight_data.character;
 
                 sleep_until_cooldown_expired(fight_data.cooldown.expiration).await;
@@ -208,7 +205,7 @@ fn configure_logging() {
     let log_path = "./artifacts.log";
     let log_file = std::fs::File::create(log_path).expect("Failed to create log file");
 
-    let file_subscriber = tracing_subscriber::fmt::layer()
+    let file_layer = tracing_subscriber::fmt::layer()
         .with_file(true)
         .with_line_number(true)
         .with_writer(log_file)
@@ -220,7 +217,7 @@ fn configure_logging() {
     tui_logger::set_default_level(tui_logger::LevelFilter::Trace);
 
     tracing_subscriber::registry()
-        .with(file_subscriber)
+        .with(file_layer)
         .with(ErrorLayer::default())
         .with(TuiTracingSubscriberLayer)
         .init();
@@ -274,6 +271,5 @@ async fn main() -> anyhow::Result<()> {
     _ = tokio::join!(char_fight_handle, update_char_handle);
 
     ratatui::restore();
-
     Ok(())
 }
