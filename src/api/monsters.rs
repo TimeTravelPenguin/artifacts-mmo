@@ -16,6 +16,7 @@ make_error!(GetMonsterError,
         => "Monster not found",
 );
 
+// Query parameters for fetching monsters
 #[skip_serializing_none]
 #[derive(Default, Debug, Setters, Serialize, Deserialize)]
 #[setters(strip_option)]
@@ -29,6 +30,7 @@ pub struct MonsterQuery {
 }
 
 impl ArtifactsClient {
+    /// Fetches monsters based on the provided query parameters.
     pub async fn get_monsters(
         &self,
         query: &MonsterQuery,
@@ -52,6 +54,7 @@ impl ArtifactsClient {
         Ok(char)
     }
 
+    /// Fetches a specific monster by its code.
     pub async fn get_monster(
         &self,
         code: &str,

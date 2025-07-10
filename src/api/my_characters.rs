@@ -47,6 +47,7 @@ make_error!(CharacterMoveError,
 );
 
 impl ArtifactsClient {
+    /// Fetches all characters for the authenticated user.
     pub async fn get_characters(
         &self,
     ) -> Result<Vec<Character>, ArtifactsError<GetCharactersError>> {
@@ -64,6 +65,7 @@ impl ArtifactsClient {
         Ok(chars)
     }
 
+    /// Initiates a fight with the specified character.
     pub async fn fight(
         &self,
         name: &str,
@@ -87,6 +89,7 @@ impl ArtifactsClient {
         Ok(char)
     }
 
+    /// Rests the specified character.
     pub async fn rest(
         &self,
         name: &str,
@@ -110,6 +113,7 @@ impl ArtifactsClient {
         Ok(char)
     }
 
+    /// Moves the specified character to the given coordinates.
     pub async fn move_character(
         &self,
         name: &str,

@@ -16,6 +16,7 @@ make_error!(GetMapError,
         => "Map not found",
 );
 
+// Query parameters for fetching maps
 #[skip_serializing_none]
 #[derive(Default, Debug, Setters, Serialize, Deserialize)]
 #[setters(strip_option)]
@@ -27,6 +28,7 @@ pub struct MapQuery {
 }
 
 impl ArtifactsClient {
+    /// Fetches maps based on the provided query parameters.
     pub async fn get_maps(
         &self,
         query: &MapQuery,
@@ -50,6 +52,7 @@ impl ArtifactsClient {
         Ok(char)
     }
 
+    /// Fetches a specific map by its coordinates (x, y).
     pub async fn get_map(&self, x: i32, y: i32) -> Result<Map, ArtifactsError<GetMapError>> {
         debug!("Fetching map at coordinates: ({}, {})", x, y);
 

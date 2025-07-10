@@ -17,6 +17,7 @@ make_error!(DeleteCharacterError,
 );
 
 impl ArtifactsClient {
+    /// Fetches a character by name.
     pub async fn get_character(
         &self,
         name: &str,
@@ -35,6 +36,7 @@ impl ArtifactsClient {
         Ok(char)
     }
 
+    /// Deletes a character by name.
     pub async fn delete_character(
         &self,
         name: &str,

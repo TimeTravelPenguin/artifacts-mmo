@@ -5,6 +5,7 @@ use reqwest_middleware::{ClientBuilder, Extension};
 use reqwest_retry::{Jitter, RetryTransientMiddleware, policies::ExponentialBackoff};
 use reqwest_tracing::{OtelName, TracingMiddleware};
 
+/// Custom client for interacting with the Artifacts API.
 #[derive(Derivative, Clone)]
 #[derivative(Debug)]
 pub struct ArtifactsClient {
