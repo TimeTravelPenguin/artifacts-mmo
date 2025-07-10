@@ -1,4 +1,4 @@
-use tracing::info;
+use tracing::debug;
 
 use crate::{
     api::{ArtifactsApiResponse, ArtifactsError, client::ArtifactsClient},
@@ -21,7 +21,7 @@ impl ArtifactsClient {
         &self,
         name: &str,
     ) -> Result<Character, ArtifactsError<GetCharacterError>> {
-        info!("Fetching character: {}", name);
+        debug!("Fetching character: {}", name);
 
         let url = format!("{}/characters/{}", self.base_url, name);
         let resp = self
@@ -39,7 +39,7 @@ impl ArtifactsClient {
         &self,
         name: &str,
     ) -> Result<Character, ArtifactsError<DeleteCharacterError>> {
-        info!("Deleting character: {}", name);
+        debug!("Deleting character: {}", name);
 
         let body = serde_json::json!({
             "name": name,

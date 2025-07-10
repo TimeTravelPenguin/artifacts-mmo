@@ -1,4 +1,4 @@
-use tracing::info;
+use tracing::debug;
 
 use crate::{
     api::{ArtifactsApiResponse, ArtifactsError, client::ArtifactsClient},
@@ -50,7 +50,7 @@ impl ArtifactsClient {
     pub async fn get_characters(
         &self,
     ) -> Result<Vec<Character>, ArtifactsError<GetCharactersError>> {
-        info!("Fetching all characters");
+        debug!("Fetching all characters");
 
         let url = format!("{}/my/characters", self.base_url);
         let resp = self
@@ -68,7 +68,7 @@ impl ArtifactsClient {
         &self,
         name: &str,
     ) -> Result<CharacterFightData, ArtifactsError<CharacterFightError>> {
-        info!("Fighting with character: {}", name);
+        debug!("Fighting with character: {}", name);
 
         let body = serde_json::json!({
             "name": name,
@@ -91,7 +91,7 @@ impl ArtifactsClient {
         &self,
         name: &str,
     ) -> Result<CharacterRestData, ArtifactsError<CharacterRestError>> {
-        info!("Resting character: {}", name);
+        debug!("Resting character: {}", name);
 
         let body = serde_json::json!({
             "name": name,
@@ -116,7 +116,7 @@ impl ArtifactsClient {
         x: i32,
         y: i32,
     ) -> Result<CharacterMovementData, ArtifactsError<CharacterMoveError>> {
-        info!("Moving character: {} to ({}, {})", name, x, y);
+        debug!("Moving character: {} to ({}, {})", name, x, y);
 
         let body = serde_json::json!({
             "x": x,
